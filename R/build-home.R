@@ -61,7 +61,6 @@ build_home <- function(pkg = ".", path = "docs", depth = 0L, encoding = "UTF-8")
           function(input, encoding) {
             rmarkdown::render(
               input,
-              output_options = list(html_preview = FALSE),
               quiet = TRUE,
               encoding = encoding
             )
