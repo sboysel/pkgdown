@@ -1,0 +1,7 @@
+urls:
+  reference: http://hadley.github.io/pkgdown/reference
+  article: http://hadley.github.io/pkgdown/articles
+articles:
+  pkgdown: pkgdown.html
+  highlight: test/highlight.html
+

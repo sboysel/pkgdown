@@ -6,3 +6,5 @@
 ^_pkgdown\.yml$
 ^README\.Rmd$
 ^README-.*\.png$
+^pkgdown$
+^codecov\.yml$

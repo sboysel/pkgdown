@@ -33,20 +33,34 @@ reproducible.}
 \item{encoding}{The encoding of the input files.}
 }
 \description{
-\code{build_site()} is a convenient wrapper around four functions:
+\code{build_site()} is a convenient wrapper around five functions:
 \itemize{
-  \item \code{\link{build_articles}()}
-  \item \code{\link{build_home}()}
-  \item \code{\link{build_reference}()}
-  \item \code{\link{build_news}()}
+\item \code{init_site()}
+\item \code{\link[=build_articles]{build_articles()}}
+\item \code{\link[=build_home]{build_home()}}
+\item \code{\link[=build_reference]{build_reference()}}
+\item \code{\link[=build_news]{build_news()}}
 }
+
 See the documentation for the each function to learn how to control
 that aspect of the site.
 }
+\section{Custom CSS/JS}{
+
+If you want to do minor customisation of your pkgdown site, the easiest
+way is to add \code{pkgdown/extra.css} and \code{pkgdown/extra.js}. These
+will be automatically copied to \code{docs/} and inserted into the
+\code{<HEAD>} after the default pkgdown CSS and JSS.
+}
+
 \section{YAML config}{
 
-There are five top-level YAML settings that affect the entire site:
-\code{title}, \code{template}, and \code{navbar}.
+There are four top-level YAML settings that affect the entire site:
+\code{url}, \code{title}, \code{template}, and \code{navbar}.
+
+\code{url} optionally specifies the url where the site will be published.
+If you supply this, other pkgdown sites will link to your site when needed,
+rather than using generic links to \url{rdocumentation.org}.
 
 \code{title} overrides the default site title, which is the package name.
 It's used in the page title and default navbar.
@@ -108,7 +122,7 @@ icons. You can see a full list of options at
 
 Any missing components (\code{type}, \code{left}, or \code{right})
 will be automatically filled in from the default navbar: you can see
-those values by running \code{\link{template_navbar}()}.
+those values by running \code{\link[=template_navbar]{template_navbar()}}.
 }
 
 \section{YAML config - template}{

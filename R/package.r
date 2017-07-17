@@ -1,7 +1,7 @@
 #' Generate pkgdown data structure
 #'
 #' You will generally not need to use this unless you need a custom site
-#' design and you're writing your own equivalent of \code{\link{build_site}}.
+#' design and you're writing your own equivalent of [build_site()].
 #'
 #' @param path Path to package
 #' @export
@@ -14,13 +14,20 @@ as_pkgdown <- function(path = ".") {
     stop("`path` is not an existing directory", call. = FALSE)
   }
 
+  desc <- read_desc(path)
+  package <- desc$get("Package")[[1]]
+  topics <- package_topics(path, package)
+
   structure(
     list(
+      package = package,
       path = path,
-      desc = read_desc(path),
+      desc = desc,
       meta = read_meta(path),
-      topics = topic_index(path),
-      vignettes = vignette_index(path)
+      topics = topics,
+      vignettes = package_vignettes(path),
+      topic_index = topic_index_local(package, path),
+      article_index = article_index_local(package, path)
     ),
     class = "pkgdown"
   )
@@ -51,7 +58,10 @@ read_desc <- function(path = ".") {
 # Metadata ----------------------------------------------------------------
 
 read_meta <- function(path) {
-  path <- find_first_existing(path, c("_pkgdown.yml", "_pkgdown.yaml"))
+  path <- find_first_existing(
+    path,
+    c("_pkgdown.yml", "pkgdown/_pkgdown.yml", "_pkgdown.yaml")
+  )
 
   if (is.null(path)) {
     yaml <- list()
@@ -64,8 +74,12 @@ read_meta <- function(path) {
 
 # Topics ------------------------------------------------------------------
 
-topic_index <- function(path = ".") {
+package_topics <- function(path = ".", package = "") {
   rd <- package_rd(path)
+
+  # In case there are links in titles
+  scoped_package_context(package)
+  scoped_file_context()
 
   aliases <- purrr::map(rd, extract_tag, "tag_alias")
   names <- purrr::map_chr(rd, extract_tag, "tag_name")
@@ -121,7 +135,7 @@ is_internal <- function(x) {
 
 # Vignettes ---------------------------------------------------------------
 
-vignette_index <- function(path = ".") {
+package_vignettes <- function(path = ".") {
   vig_path <- dir(
     file.path(path, "vignettes"),
     pattern = "\\.Rmd$",

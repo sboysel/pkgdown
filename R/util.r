@@ -1,5 +1,7 @@
 #' @importFrom magrittr %>%
 #' @importFrom roxygen2 roxygenise
+#' @importFrom R6 R6Class
+#' @import rlang
 NULL
 
 inst_path <- function() {
@@ -10,10 +12,6 @@ inst_path <- function() {
     # pkgdown was probably loaded with devtools
     file.path(getNamespaceInfo("pkgdown", "path"), "inst")
   }
-}
-
-"%||%" <- function(a, b) {
-  if (length(a)) a else b
 }
 
 markdown_text <- function(text, ...) {
@@ -27,7 +25,7 @@ markdown_text <- function(text, ...) {
   markdown(tmp, ...)
 }
 
-markdown <- function(path = NULL, ..., depth = 0L, index = NULL) {
+markdown <- function(path = NULL, ..., depth = 0L) {
   tmp <- tempfile(fileext = ".html")
   on.exit(unlink(tmp), add = TRUE)
 
@@ -45,7 +43,7 @@ markdown <- function(path = NULL, ..., depth = 0L, index = NULL) {
   )
 
   xml <- xml2::read_html(tmp, encoding = "UTF-8")
-  autolink_html(xml, depth = depth, index = index)
+  tweak_code(xml, depth = depth)
   tweak_anchors(xml, only_contents = FALSE)
 
   # Extract body of html - as.character renders as xml which adds
@@ -58,48 +56,6 @@ markdown <- function(path = NULL, ..., depth = 0L, index = NULL) {
   lines <- sub("<body>", "", lines, fixed = TRUE)
   lines <- sub("</body>", "", lines, fixed = TRUE)
   paste(lines, collapse = "\n")
-}
-
-tweak_anchors <- function(html, only_contents = TRUE) {
-  if (only_contents) {
-    sections <- xml2::xml_find_all(html, ".//div[@class='contents']//div[@id]")
-  } else {
-    sections <- xml2::xml_find_all(html, "//div[@id]")
-  }
-
-  if (length(sections) == 0)
-    return()
-
-  # Update anchors: dot in the anchor breaks scrollspy
-  anchor <- sections %>%
-    xml2::xml_attr("id") %>%
-    gsub(".", "-", ., fixed = TRUE)
-  purrr::walk2(sections, anchor, ~ (xml2::xml_attr(.x, "id") <- .y))
-
-  headings <- xml2::xml_find_first(sections, ".//h1|h2|h3|h4|h5")
-  has_heading <- !is.na(xml2::xml_name(headings))
-
-  for (i in seq_along(headings)[has_heading]) {
-    # Insert anchor in first element of header
-    heading <- headings[[i]]
-
-    xml2::xml_attr(heading, "class") <- "hasAnchor"
-    xml2::xml_add_sibling(
-      xml2::xml_contents(heading)[[1]],
-      "a", href = paste0("#", anchor[[i]]),
-      class = "anchor",
-      .where = "before"
-    )
-  }
-  invisible()
-}
-
-tweak_tables <- function(html) {
-  # Ensure all tables have class="table"
-  table <- xml2::xml_find_all(html, ".//table")
-  xml2::xml_attr(table, "class") <- "table"
-
-  invisible()
 }
 
 set_contains <- function(haystack, needles) {
@@ -155,16 +111,28 @@ print.print_yaml <- function(x, ...) {
   cat(yaml::as.yaml(x), "\n", sep = "")
 }
 
-copy_dir <- function(from, to) {
+copy_dir <- function(from, to, exclude_matching = NULL) {
 
   from_dirs <- list.dirs(from, full.names = FALSE, recursive = TRUE)
   from_dirs <- from_dirs[from_dirs != '']
+
+  if (!is.null(exclude_matching)) {
+    exclude <- grepl(exclude_matching, from_dirs)
+    from_dirs <- from_dirs[!exclude]
+  }
 
   to_dirs <- file.path(to, from_dirs)
   purrr::walk(to_dirs, mkdir)
 
   from_files <- list.files(from, recursive = TRUE, full.names = TRUE)
   from_files_rel <- list.files(from, recursive = TRUE)
+
+  if (!is.null(exclude_matching)) {
+    exclude <- grepl(exclude_matching, from_files_rel)
+
+    from_files <- from_files[!exclude]
+    from_files_rel <- from_files_rel[!exclude]
+  }
 
   to_paths <- file.path(to, from_files_rel)
   file.copy(from_files, to_paths, overwrite = TRUE)
@@ -246,3 +214,34 @@ set_pkgdown_env <- function(x) {
   Sys.setenv("IN_PKGDOWN" = x)
   invisible(old)
 }
+
+read_file <- function(path) {
+  lines <- readLines(path, warn = FALSE)
+  paste0(lines, "\n", collapse = "")
+}
+
+write_yaml <- function(x, path) {
+  cat(yaml::as.yaml(x), "\n", sep = "", file = path)
+}
+
+invert_index <- function(x) {
+  stopifnot(is.list(x))
+
+  if (length(x) == 0)
+    return(list())
+
+  key <- rep(names(x), purrr::map_int(x, length))
+  val <- unlist(x, use.names = FALSE)
+
+  split(key, val)
+}
+
+a <- function(text, href) {
+  ifelse(is.na(href), text, paste0("<a href='", href, "'>", text, "</a>"))
+}
+
+# Used for testing
+#' @keywords internal
+#' @importFrom MASS addterm
+#' @export
+MASS::addterm
